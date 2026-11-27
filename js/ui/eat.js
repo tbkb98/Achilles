@@ -1,7 +1,7 @@
 // Eat: the day's meal slots, one tap each; portions, quick entry, extras, milk (NUT-01..09).
 import { h, stepper, ok, bar } from '../dom.js';
 import { S, setKV, saveDay, today } from '../state.js';
-import { dayTotals, addDays } from '../engine/nutrition.js';
+import { dayTotals, addDays, calorieSuggestion } from '../engine/nutrition.js';
 import { render, sheet } from '../app.js';
 import { haptic } from '../platform/device.js';
 
@@ -16,7 +16,7 @@ export function plan() {
   if (p && p.slots.some((s) => !s.id)) { p.slots.forEach((s) => { if (!s.id) s.id = newId(); }); setKV('mealPlan', p); }
   return p || null;
 }
-export const planKcal = (p) => p.slots.reduce((a, s) => a + (s.kcal || 0), 0);
+export const planKcal = (p) => p.slots.reduce((a, s) => a + (s.kcal || 0), 0) + (p.kcalOffset || 0);
 export const dayDoc = (date) => S.days.find((d) => d.id === date) || { id: date, date, slots: [], extras: [], milkMl: 0 };
 export const targetFor = (day, p) => day.kcalTarget ?? (p ? p.kcalTarget || planKcal(p) : 0);
 function put(day, p) { if (p && day.kcalTarget == null) day.kcalTarget = p.kcalTarget || planKcal(p); return saveDay(day); }
@@ -101,6 +101,16 @@ export function eatView() {
     h('button', { class: 'meal-more', 'aria-label': `Remove ${label}`, onclick: async () => { drop(); await put(day, p); render(); } }, '×'));
   const milk = day.milkMl || 0;
   const setMilk = async (d) => { day.milkMl = Math.max(0, milk + d); haptic(); await put(day, p); render(); };
+  // trend-based suggestion (BOD-04): a card to accept or wave off, never an automatic change
+  const sug = p && date === t ? calorieSuggestion(S.weights, t, p.validFrom) : null;
+  const snoozed = S.kv.suggestSnooze && S.kv.suggestSnooze >= addDays(t, -7);
+  const sugCard = sug && sug.kind === 'change' && !snoozed ? h('div', { class: 'panel goldline' },
+    h('div', { class: 'label gold' }, 'From your weight trend'),
+    h('div', {}, sug.delta > 0 ? `Two weeks under half a kilo a week. Eat ${sug.delta} kcal more a day?` : `Two weeks over a kilo a week. Ease off by ${-sug.delta} kcal a day?`),
+    h('div', { class: 'grid2' },
+      h('button', { class: 'btn on', onclick: async () => { p.kcalOffset = (p.kcalOffset || 0) + sug.delta; await savePlan(p); render(); } }, `Make it ${n0(planKcal(p) + sug.delta)}`),
+      h('button', { class: 'btn', onclick: async () => { await setKV('suggestSnooze', t); render(); } }, 'Not now')))
+    : sug && sug.kind === 'early' ? h('div', { class: 'mute small' }, 'New plan: the first two weeks of gain are mostly water and glycogen, so no advice yet.') : null;
   const dateLabel = date === t ? 'TODAY' : new Date(date + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase();
 
   return h('div', { class: 'screen tabbed' },
@@ -112,6 +122,7 @@ export function eatView() {
       h('div', { class: 'row top' }, h('div', { class: 'big gold' }, n0(tot.kcal)), h('div', { class: 'mute' }, target ? `of ${n0(target)} kcal · ${tot.eaten} of ${p ? p.slots.length : 0} meals` : 'kcal')),
       target > 0 && bar(tot.kcal / target * 100),
       h('div', { class: 'mute small' }, tot.protein ? `Protein ${tot.protein} g${tot.partial ? ' counted so far; some meals have no protein value yet' : ''}` : 'Protein is counted once a meal has a protein value. Add it from the ··· button.')),
+    sugCard,
     !p && h('div', { class: 'panel goldline' }, h('div', { class: 'label gold' }, 'No meal plan yet'), h('div', {}, 'Your setup file brings in your plan. Or add meals one by one below.')),
     h('div', { class: 'stack', style: 'gap:6px' }, p && p.slots.map(row),
       orphans.map((x) => extraRow(x, x.name, () => { day.slots = day.slots.filter((y) => y !== x); })),

@@ -12,24 +12,38 @@ export function unlockAudio(loud) {
     if (ctx.state === 'suspended') ctx.resume();
   } catch (e) { /* no sound on this device */ }
 }
-function note(freq, at, dur, vol = 0.12) {
-  if (!ctx) return;
-  const o = ctx.createOscillator(), g = ctx.createGain();
-  o.type = 'square'; o.frequency.value = freq;
-  g.gain.setValueAtTime(vol, ctx.currentTime + at);
-  g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + at + dur);
-  o.connect(g).connect(ctx.destination);
-  o.start(ctx.currentTime + at); o.stop(ctx.currentTime + at + dur + 0.02);
+// Ring bell, synthesised the way a struck bell actually sounds: a set of inharmonic sine partials,
+// each fading at its own rate (high ones die first), every partial doubled a hair apart so the
+// tone shimmers, plus a few milliseconds of filtered noise for the hammer hitting metal.
+const PARTIALS = [ // [ratio to the strike note, level, seconds to fade]
+  [0.5, 0.18, 2.6], [0.92, 0.3, 2.2], [1.0, 1.0, 2.0], [1.19, 0.36, 1.5], [1.56, 0.3, 1.2], [2.0, 0.6, 1.1],
+  [2.51, 0.3, 0.8], [2.74, 0.32, 0.7], [3.0, 0.2, 0.6], [3.76, 0.18, 0.45], [4.07, 0.14, 0.35], [5.4, 0.08, 0.25],
+];
+export const BELL_TONES = { deep: 660, ring: 990, sharp: 1480 };
+function strike(at, f0, vol, sustain) {
+  const t = ctx.currentTime + at, out = ctx.createGain();
+  out.gain.value = vol; out.connect(ctx.destination);   // no compressor: it squashed the first strike
+  for (const [ratio, level, fade] of PARTIALS) for (const twin of [1, 1.0035]) {
+    const o = ctx.createOscillator(), g = ctx.createGain(), d = Math.max(0.08, fade * sustain);
+    o.type = 'sine'; o.frequency.value = f0 * ratio * twin;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(level * 0.5, t + 0.003); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(g).connect(out); o.start(t); o.stop(t + d + 0.05);
+  }
+  const len = Math.floor(ctx.sampleRate * 0.025), buf = ctx.createBuffer(1, len, ctx.sampleRate), ch = buf.getChannelData(0);
+  for (let k = 0; k < len; k++) ch[k] = (Math.random() * 2 - 1) * (1 - k / len);
+  const n = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), ng = ctx.createGain();
+  bp.type = 'bandpass'; bp.frequency.value = f0 * 3.2; bp.Q.value = 0.7; ng.gain.value = 0.9;
+  n.buffer = buf; n.connect(bp).connect(ng).connect(out); n.start(t);
 }
-// One strike of a ring bell in square waves: a fundamental, a slightly detuned twin for the
-// metallic shimmer, and two short inharmonic overtones for the clang.
-function strike(at, ring, vol) {
-  note(1047, at, ring, vol); note(1061, at, ring, vol * 0.55);
-  note(2794, at, ring * 0.5, vol * 0.3); note(4435, at, ring * 0.2, vol * 0.18);
+// End of round: ding-ding-ding. The first two are cut short by the next blow; the last rings out.
+export function bell(tone) {
+  try {
+    if (!ctx) return;
+    const f0 = BELL_TONES[tone] || BELL_TONES.ring;
+    strike(0, f0, 0.26, 0.22); strike(0.27, f0, 0.26, 0.22); strike(0.54, f0, 0.28, 1.25);
+  } catch (e) {}
 }
-// Boxing bell: ding-ding-ding, the last one left to ring.
-export function bell() { try { strike(0, 0.3, 0.1); strike(0.2, 0.3, 0.1); strike(0.4, 1.3, 0.11); } catch (e) {} }
-export function tick() { try { note(660, 0, 0.08, 0.08); } catch (e) {} }
+export function tick() { try { if (ctx) strike(0, 1320, 0.05, 0.08); } catch (e) {} }
 
 // --- keep the screen awake during a session (iOS 18.4+ in Home Screen apps) ---
 async function acquire() {

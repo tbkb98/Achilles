@@ -13,14 +13,14 @@ A training log for a Super Squats program, built as a Home Screen web app for iP
 
 Always open Achilles from the Home Screen icon. Safari and the Home Screen app keep separate storage.
 
-## What it does (version 1.1)
+## What it does (version 1.2)
 
 **Training**
 - Shows what is due today (Upper or Lower) with the target load for every lift, worked out from your last session.
 - Logs a set in one tap. Steppers correct weight and reps without a keyboard; hold a stepper to repeat.
 - Breathing Squat Mode: a display you read from under the bar, with time-based cues. You confirm the reps after racking.
 - Leg-extension protocol runner with a 20-second hold timer and a stopwatch for the last hold.
-- Rest and transition timers based on clock time, with a ring bell, a flash and a tick at ten seconds. The screen stays awake during a session.
+- Rest and transition timers based on clock time, with a boxing bell, a flash and a tick at ten seconds. The screen stays awake during a session.
 - Undo, skip, do later, add an exercise, session note, end early. Restores the exact session after the app is closed or killed.
 - History with editing: fix reps or loads after the fact, or delete a session.
 
@@ -37,7 +37,17 @@ Always open Achilles from the Home Screen icon. Safari and the Home Screen app k
 **Data**
 - Backup to a JSON file, restore from it, export sets as CSV, export in the wide sheet layout.
 
-Not yet: hero stages, progress charts, goals, pillars library, template editor (milestone 3).
+**The hero and progress**
+- A pixel hero with six stages. His stage comes from five lines only: body weight and four lifts, measured from where you started to the Super Squats standards at your goal weight.
+- He swells one stage during a session as the sets go in, and flexes while you rest. Afterwards the earned stage remains.
+- Progress tab: the five lines, a chart for every lift (including an imported older sheet), body weight with its 7-day average and goal markers, and your best loads.
+- Morning check-in (sleep, pulse, deep ache) with a green, amber or red suggestion. It never blocks a session.
+- A calorie suggestion when two weeks of weight trend run under 0.5 kg or over 1 kg a week. You accept it or wave it off.
+
+**Yours to shape**
+- Routine editor: order, sets, reps, Fat Gripz on or off, add and remove lifts.
+- Pillars and quotes: rest any line, add your own. A name is kept on a quote only when you give its source.
+- Bell tone: deep, ring or sharp.
 
 ## Limits of a web app on iPhone
 

@@ -1,9 +1,9 @@
 // Recovery: sauna and hammam minutes (edited to what was really done), an optional timer that
-// records actual time, stretching check-offs and the cold-exposure guard (SPA-01..05).
+// records actual time, and stretching check-offs (SPA-01..04).
 import { h, stepper, ok, clock } from '../dom.js';
 import { S, settings, saveRecovery, deleteRecovery, setKV, activeSession } from '../state.js';
 import { bell, flash, haptic, unlockAudio } from '../platform/device.js';
-import { render, go, setTicker, sheet } from '../app.js';
+import { render, go, setTicker } from '../app.js';
 
 const editing = new Set();
 const of = (date, type) => S.recovery.filter((r) => r.date === date && r.type === type);
@@ -57,7 +57,7 @@ export function spaView() {
     return rem;
   };
   paint();
-  setTicker(() => { if (paint() <= 0 && !t.belled) { t.belled = true; setKV('spaTimer', t); if (st.bell) bell(); if (st.flash) flash(); } });
+  setTicker(() => { if (paint() <= 0 && !t.belled) { t.belled = true; setKV('spaTimer', t); if (st.bell) bell(st.bellTone); if (st.flash) flash(); } });
   const actual = () => Math.max(1, Math.round((Date.now() - t.startedAt) / 60000));
   const finish = async () => { await writeHeat(t.date, t.rec[0], t.rec[1], t.sessionId); await setKV('spaTimer', null); back(); };
   const next = () => {
@@ -75,26 +75,15 @@ export function spaView() {
         h('button', { class: 'btn', onclick: async () => { await setKV('spaTimer', null); back(); } }, 'Cancel, log nothing'))));
 }
 
-// Stretching check-offs and cold exposure, with T's own rule as a guard (SPA-04, SPA-05).
+// Stretching check-offs (SPA-04).
 export function recoveryExtras(date) {
-  const flip = async (type, on) => {
-    if (on) for (const r of of(date, type)) await deleteRecovery(r.id);
-    else await saveRecovery({ id: `rec-${date}-${type}`, date, type, loggedAt: new Date().toISOString() });
-    render();
-  };
-  const tog = (label, type, guard) => {
+  const tog = (label, type) => {
     const on = of(date, type).length > 0;
-    return h('button', { class: 'btn tight' + (on ? ' on' : ''), 'aria-pressed': on ? 'true' : 'false', onclick: () => (guard && !on ? guard(() => flip(type, false)) : flip(type, on)) }, on && ok(), label);
+    return h('button', { class: 'btn tight' + (on ? ' on' : ''), 'aria-pressed': on ? 'true' : 'false', onclick: async () => {
+      if (on) for (const r of of(date, type)) await deleteRecovery(r.id);
+      else await saveRecovery({ id: `rec-${date}-${type}`, date, type, loggedAt: new Date().toISOString() });
+      render();
+    } }, on && ok(), label);
   };
-  const coldGuard = (log) => {
-    const recent = S.sessions.some((s) => s.date === date && s.endedAt && Date.now() - s.endedAt < 4 * 3600e3 && Date.now() >= s.endedAt);
-    if (!recent) return log();
-    sheet((close) => [
-      h('div', { class: 'label gold' }, 'Your own rule'),
-      h('div', {}, 'No cold water straight after training: it can blunt the muscle-building response. You trained less than four hours ago. Heat is fine.'),
-      h('button', { class: 'btn', onclick: () => { close(); log(); } }, 'Log it anyway'),
-      h('button', { class: 'btn line-gold', onclick: close }, 'LEAVE IT'),
-    ]);
-  };
-  return h('div', { class: 'grid3' }, tog('Stretch AM', 'STRETCH_AM'), tog('Stretch PM', 'STRETCH_PM'), tog('Cold', 'COLD', coldGuard));
+  return h('div', { class: 'grid2' }, tog('Stretch AM', 'STRETCH_AM'), tog('Stretch PM', 'STRETCH_PM'));
 }

@@ -2,7 +2,8 @@
 import { h, kg, stepper } from '../dom.js';
 import { S, settings, setSetting, setKV, exportAll, importData, eraseAll, toCSV, toSheetCSV, activeSession, today } from '../state.js';
 import { TEMPLATES } from '../../seed/program.js';
-import { bell, unlockAudio, shareFile } from '../platform/device.js';
+import { go } from '../app.js';
+import { bell, unlockAudio, shareFile, BELL_TONES } from '../platform/device.js';
 import { render, toast, applyUpdate, VERSION } from '../app.js';
 
 const PLATES = [25, 20, 15, 10, 5, 2.5, 1.25, 0.5];
@@ -37,7 +38,9 @@ export function settingsView() {
 
     h('div', { class: 'panel' }, h('div', { class: 'label gold' }, 'Upper body day'),
       TEMPLATES.filter((t) => t.dayType === 'UPPER').map((t) => h('button', { class: 'btn' + (st.upperTemplate === t.id ? ' on' : ''), 'aria-pressed': st.upperTemplate === t.id ? 'true' : 'false', onclick: async () => { await setSetting('upperTemplate', t.id); render(); } }, t.id === 'upper-revised' ? 'Revised: bench first, lateral raises, pullover' : 'As logged in your sheet')),
-      h('div', { class: 'mute small' }, 'Applies from the next session you start.')),
+      h('div', { class: 'mute small' }, 'Applies from the next session you start.'),
+      h('button', { class: 'btn', onclick: () => go('routines') }, 'Edit my routines'),
+      h('button', { class: 'btn', onclick: () => go('pillars') }, 'Pillars and quotes')),
 
     h('div', { class: 'panel' }, h('div', { class: 'label gold' }, 'Bar and plates'),
       h('div', { class: 'stepper sm' }, h('span', { style: 'width:70px' }, 'Bar'), stepper({ value: st.bar, step: 2.5, min: 5, max: 30, fmt: (x) => `${kg(x)} kg`, label: 'bar weight', onChange: (x) => setSetting('bar', x) })),
@@ -49,7 +52,9 @@ export function settingsView() {
 
     h('div', { class: 'panel' }, h('div', { class: 'label gold' }, 'When rest ends'),
       toggle('Bell', 'bell'), toggle('Bell sounds on silent', 'loud'), toggle('Screen flash', 'flash'), toggle('Tick at 10 seconds', 'tick'),
-      h('button', { class: 'btn', onclick: () => { unlockAudio(st.loud); bell(); } }, 'Test the bell'),
+      h('div', { class: 'mute small' }, 'Bell tone:'),
+      h('div', { class: 'grid3' }, Object.keys(BELL_TONES).map((k) => h('button', { class: 'btn tight' + (st.bellTone === k ? ' on' : ''), 'aria-pressed': st.bellTone === k ? 'true' : 'false', onclick: async () => { unlockAudio(st.loud); bell(k); await setSetting('bellTone', k); render(); } }, k[0].toUpperCase() + k.slice(1)))),
+      h('button', { class: 'btn', onclick: () => { unlockAudio(st.loud); bell(st.bellTone); } }, 'Test the bell'),
       h('div', { class: 'mute small' }, 'The bell and flash need Achilles open on screen. A locked phone stays quiet.')),
 
     h('div', { class: 'panel' }, h('div', { class: 'label gold' }, 'Session'),
@@ -68,7 +73,7 @@ export function settingsView() {
       h('div', { class: 'mute small' }, 'Nothing leaves this phone unless you export it. ' + (S.persisted === false ? 'iOS has not marked this storage as permanent, so keep a backup.' : ''))),
 
     h('div', { class: 'panel' }, h('div', { class: 'label gold' }, 'About'),
-      h('div', { class: 'mute small' }, `Achilles ${VERSION}. Sessions, eating, weight trend and recovery. Hero stages and progress charts come next.`),
+      h('div', { class: 'mute small' }, `Achilles ${VERSION}. Everything you log stays on this phone.`),
       S.updateReady && h('button', { class: 'btn on', disabled: busy, onclick: applyUpdate }, busy ? 'Update ready · finish your session first' : 'Update ready · install now'),
       !S.updateReady && h('button', { class: 'btn', onclick: async () => { try { if (S.swReg) await S.swReg.update(); } catch (e) {} setTimeout(() => { toast(S.updateReady ? 'Update found.' : 'You have the latest version.'); render(); }, 1200); } }, 'Check for an update')));
 }

@@ -8,8 +8,11 @@ import { historyView, logView } from './ui/history.js';
 import { settingsView } from './ui/settings.js';
 import { eatView } from './ui/eat.js';
 import { spaView } from './ui/recovery.js';
+import { progressView } from './ui/progress.js';
+import { pillarsView } from './ui/pillars.js';
+import { routinesView } from './ui/routines.js';
 
-export const VERSION = '1.1.0';
+export const VERSION = '1.2.0';
 
 // One ticker at a time: the visible screen registers what must update four times a second.
 let ticker = null;
@@ -39,10 +42,11 @@ const TABS = [
   ['today', 'Today', '<path d="M3 11l9-8 9 8v9H3z"/>'],
   ['train', 'History', '<path d="M2 12h20M6 7v10M18 7v10"/>'],
   ['eat', 'Eat', '<path d="M3 11h18a9 9 0 0 1-18 0zM12 3v5"/>'],
+  ['progress', 'Progress', '<path d="M3 20h18M6 16v-4M11 16V8M16 16V5"/>'],
   ['settings', 'Settings', '<circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M19 5l-3 3M8 16l-3 3"/>'],
 ];
 function tabbar(r) {
-  const on = r === 'log' ? 'train' : r;
+  const on = r === 'log' ? 'train' : r === 'pillars' || r === 'routines' ? 'settings' : r;
   return h('nav', { class: 'tabbar', 'aria-label': 'Tabs' }, TABS.map(([id, name, d]) => h('button', { class: id === on ? 'on' : '', 'aria-current': id === on ? 'page' : null, onclick: () => go(id) }, svg(d), name)));
 }
 
@@ -76,6 +80,9 @@ export function render() {
   } else if (r === 'spa') { view = spaView(); tabbed = false; }
   else if (r === 'train') view = historyView();
   else if (r === 'eat') view = eatView();
+  else if (r === 'progress') view = progressView();
+  else if (r === 'pillars') view = pillarsView();
+  else if (r === 'routines') view = routinesView();
   else if (r === 'log') view = logView(arg);
   else if (r === 'settings') view = settingsView();
   else view = todayView();

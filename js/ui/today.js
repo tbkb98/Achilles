@@ -4,17 +4,17 @@ import { S, settings, saveSession, setKV, saveWeight, deleteWeight, activeSessio
 import { buildSession, layoffFactor, daysBetween } from '../engine/progression.js';
 import { nextDayType, lastOfType } from '../engine/schedule.js';
 import { ma7, weeklyRate, inWindow, dayTotals } from '../engine/nutrition.js';
-import { EXERCISES, TEMPLATES, PROTOCOLS } from '../../seed/program.js';
+import { EXERCISES, PROTOCOLS } from '../../seed/program.js';
+import { templateFor, forgeNow } from '../program.js';
+import { STAGES } from '../engine/forge.js';
+import { recoveryLight, squatStalled } from '../engine/recovery.js';
+import { saveDay } from '../state.js';
 import { unlockAudio, haptic } from '../platform/device.js';
 import { go, render, sheet } from '../app.js';
 import { hero, stage, targetText, scheme, nameWithVariant } from './common.js';
 import { spaCard, recoveryExtras } from './recovery.js';
 import { plan, dayDoc, targetFor } from './eat.js';
 
-export function templateFor(type) {
-  if (type === 'LOWER') return TEMPLATES.find((t) => t.id === 'lower');
-  return TEMPLATES.find((t) => t.id === settings().upperTemplate && t.dayType === 'UPPER') || TEMPLATES.find((t) => t.dayType === 'UPPER');
-}
 const w1 = (x) => Number(x).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const signed = (x) => (x >= 0 ? '+' : '−') + Math.abs(x).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 let weightT = null;
@@ -62,6 +62,32 @@ export function todayView() {
   // fuel (TOD-03)
   const p = plan(), day = dayDoc(d), tot = dayTotals(day), kcalTarget = targetFor(day, p);
 
+  // hero stage and morning check-in (REC-01, REC-02)
+  const f = forgeNow(), seen = S.kv.stageSeen || 1;
+  const squats = S.sessions.filter((s) => s.status === 'COMPLETED' && s.dayType !== 'FULL').sort((x, y) => (x.date < y.date ? -1 : 1)).flatMap((s) => s.exercises.filter((e) => e.ex === 'squat' && e.logged.length).map((e) => e.logged[0].load));
+  const pulses = S.days.filter((x) => x.check && x.check.pulse && x.date < d && daysBetween(x.date, d) <= 14).map((x) => x.check.pulse);
+  const light = day.check ? recoveryLight(day.check, pulses, squatStalled(squats)) : null;
+  const ADVICE = { GREEN: 'Green. Train.', AMBER: 'Amber. Train; consider dropping the last set of the small lifts.', RED: 'Red. Consider a rest day. Your call.' };
+  const checkIn = () => sheet((close) => {
+    const lastPulse = pulses.length ? pulses[pulses.length - 1] : 60;
+    const c = { sleep: 8, pulse: lastPulse, ache: false, ...(day.check || {}) };
+    let measured = !day.check || !!day.check.pulse;
+    if (!c.pulse) c.pulse = lastPulse;
+    const ache = h('button', { class: 'btn', 'aria-pressed': 'false', onclick: () => { c.ache = !c.ache; ache.classList.toggle('on', c.ache); ache.setAttribute('aria-pressed', String(c.ache)); ache.textContent = c.ache ? 'Deep muscle ache: yes' : 'Deep muscle ache: no'; } }, c.ache ? 'Deep muscle ache: yes' : 'Deep muscle ache: no');
+    if (c.ache) ache.classList.add('on');
+    const skip = h('button', { class: 'btn tight', onclick: () => { measured = !measured; skip.textContent = measured ? 'I did not take my pulse' : 'Pulse not counted today'; skip.classList.toggle('on', !measured); } }, 'I did not take my pulse');
+    return [
+      h('div', { class: 'label gold' }, 'Morning check'),
+      h('div', { class: 'mute small' }, 'Hours slept'),
+      h('div', { class: 'stepper sm' }, stepper({ value: c.sleep, step: 0.5, min: 0, max: 14, fmt: (x) => `${x} h`, label: 'hours slept', onChange: (x) => { c.sleep = x; } })),
+      h('div', { class: 'mute small' }, 'Resting pulse on waking'),
+      h('div', { class: 'stepper sm' }, stepper({ value: c.pulse, step: 1, min: 30, max: 120, fmt: (x) => `${x} bpm`, label: 'resting pulse', onChange: (x) => { c.pulse = x; measured = true; } })),
+      skip, ache,
+      h('button', { class: 'btn on', onclick: async () => { day.check = { sleep: c.sleep, pulse: measured ? c.pulse : null, ache: c.ache }; await saveDay(day); close(); render(); } }, 'Save'),
+      h('button', { class: 'btn line-gold', onclick: close }, 'CLOSE'),
+    ];
+  });
+
   // weigh-in and trend (BOD-01, BOD-02)
   const wToday = S.weights.find((w) => w.date === d), lastW = [...S.weights].sort((x, y) => (x.date < y.date ? -1 : 1)).at(-1);
   let val = wToday ? wToday.kg : lastW ? lastW.kg : S.kv.startWeight || 75;
@@ -85,6 +111,13 @@ export function todayView() {
         h('div', {}, lead ? `${lead.name} ${kg(lead.target.load)} kg × ${lead.reps || lead.stages[0].reps}.` + (lead.last && !lead.first ? ` Last time ${kg(lead.last.load)}.` : '') : 'First session: you set each load once.'))),
     h('button', { class: 'btn gold', onclick: onStart }, a ? (a.status === 'ACTIVE' ? 'RESUME SESSION' : 'SESSION SUMMARY') : 'START SESSION'),
     !a && h('button', { class: 'btn', onclick: () => { setKV('dayOverride', { date: d, type: other }); render(); } }, `Switch to ${other.toLowerCase()} body day`),
+    f && f.stage > seen && h('div', { class: 'panel goldline', style: 'align-items:center;text-align:center' }, hero(f.stage, 128, '', true),
+      h('div', { class: 'h1 gold' }, `NEW STAGE: ${STAGES[f.stage - 1]}`), h('div', {}, 'Earned with the bar and the scale. Nothing else moves him.'),
+      h('button', { class: 'btn on', onclick: async () => { await setKV('stageSeen', f.stage); render(); } }, 'Onward')),
+    h('button', { class: 'btn line-gold', onclick: () => go('progress') }, f ? `STAGE ${f.stage} · ${STAGES[f.stage - 1]} · FORGE ${f.score}%` : 'SET A GOAL WEIGHT TO WAKE THE HERO'),
+    h('div', { class: 'panel' }, h('div', { class: 'row' }, h('div', { class: 'label' }, 'MORNING CHECK'), light && h('div', { class: 'label ' + (light.light === 'GREEN' ? 'gold' : '') }, light.light)),
+      light ? h('div', {}, ADVICE[light.light] + (light.why.length ? ` (${light.why.join(', ')})` : '')) : h('div', { class: 'mute small' }, 'Sleep, pulse, deep ache. Ten seconds; a suggestion, never a stop sign.'),
+      h('button', { class: 'btn', onclick: checkIn }, light ? 'Change' : 'Check in')),
     !S.sessions.length && h('div', { class: 'panel goldline' }, h('div', { class: 'label gold' }, 'No history yet'), h('div', {}, 'Import your setup file in Settings to bring in your latest loads. Or just start: each lift asks for its load once.')),
     h('div', { class: 'panel' }, h('div', { class: 'label' }, "TODAY'S TARGETS"),
       preview.exercises.map((e) => h('div', { class: 'list-row' }, h('span', {}, nameWithVariant(e), h('span', { class: 'mute' }, ` · ${scheme(e)}`)), h('span', { class: 'gold', style: 'white-space:nowrap' }, targetText(e))))),

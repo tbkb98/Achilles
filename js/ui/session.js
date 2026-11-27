@@ -4,10 +4,11 @@ import { S, settings, saveSession, deleteSession, closeSession } from '../state.
 import { cur, logSet, undo, skip, doLater, endNow, adjustTimer, pendingFor, isSquat, addExercise } from '../engine/session.js';
 import { setsPlanned, setsLogged, buildSession, RULE } from '../engine/progression.js';
 import { plates } from '../engine/plates.js';
-import { EXERCISES, TEMPLATES, PROTOCOLS, PILLARS, POWER, SQUAT_CUES } from '../../seed/program.js';
+import { EXERCISES, PROTOCOLS, POWER, SQUAT_CUES } from '../../seed/program.js';
+import { templateById, visiblePillars } from '../program.js';
 import { bell, tick, flash, haptic } from '../platform/device.js';
 import { render, setTicker, go, sheet } from '../app.js';
-import { hero, stage, lastText, shortVal, targetText, scheme, nameWithVariant } from './common.js';
+import { hero, heroSrc, stage, lastText, shortVal, targetText, scheme, nameWithVariant } from './common.js';
 import { spaCard } from './recovery.js';
 
 let saveT = null;
@@ -116,12 +117,14 @@ function footer(s, e) {
 function restView(s, e) {
   const t = s.timer, st = settings(), isRest = t.kind === 'rest', v = pendingFor(e);
   const time = h('div', { class: 'time gold', role: 'timer' });
-  const fill = h('div'), quote = h('div', { class: 'quote' });
+  const fill = h('div'), quote = h('div', { class: 'quote' }), by = h('div', { class: 'mute small' });
+  const pillars = visiblePillars(), st0 = stage() + (setsLogged(s) >= setsPlanned(s) ? 1 : 0), man = hero(st0, 128);
   const paint = () => {
     const rem = (t.endsAt - Date.now()) / 1000;
     time.textContent = clock(rem);
     fill.style.width = `${Math.max(0, Math.min(100, (1 - rem / Math.max(1, t.total)) * 100))}%`;
-    if (st.pillars) quote.textContent = PILLARS[(Math.floor(t.startedAt / 7000) + Math.floor((Date.now() - t.startedAt) / 20000)) % PILLARS.length];
+    if (st.pillars) { const p = pillars[(Math.floor(t.startedAt / 7000) + Math.floor((Date.now() - t.startedAt) / 20000)) % pillars.length]; if (quote.textContent !== p.text) { quote.textContent = p.text; by.textContent = p.author ? `— ${p.author}` : ''; } }
+    const src = heroSrc(st0, Math.floor(Date.now() / 600) % 2 === 1); if (!man.src.endsWith(src)) man.src = src;   // he flexes while you rest
     return rem;
   };
   paint();
@@ -130,15 +133,15 @@ function restView(s, e) {
     if (st.tick && rem <= 10 && rem > 9 && !t.ticked) { t.ticked = true; tick(); }
     if (rem <= 0) {
       s.timer = null; s.restOver = t.endsAt; saveSession(s);
-      if (rem > -3) { if (st.bell) bell(); if (st.flash) flash(); }
+      if (rem > -3) { if (st.bell) bell(st.bellTone); if (st.flash) flash(); }
       render();
     }
   });
   return h('div', { class: 'screen' }, header(s, isRest ? 'REST' : 'NEXT EXERCISE'),
     h('div', { class: 'label center' }, isRest ? `${up(e)} · ${e.logged.length} OF ${e.sets} DONE` : `UP NEXT · ${up(e)}`),
     time, h('div', { class: 'bar' }, fill),
-    h('div', { style: 'display:flex;justify-content:center' }, hero(stage() + (setsLogged(s) >= setsPlanned(s) ? 1 : 0), 128)),
-    st.pillars && h('div', { class: 'panel' }, quote),
+    h('div', { style: 'display:flex;justify-content:center' }, man),
+    st.pillars && h('div', { class: 'panel' }, quote, by),
     h('div', { class: 'row' }, h('span', { class: 'mute' }, 'Next'), h('span', { style: 'text-align:right' }, isRest ? `${e.stages ? 'Stage' : 'Set'} ${e.logged.length + 1} · ${describe(e, v)}` : describe(e, v))),
     h('div', { class: 'push stack' },
       h('div', { class: 'capsule' },
@@ -166,6 +169,7 @@ function squatView(s, e) {
       h('div', { class: 'panel' }, h('div', { class: 'label gold' }, 'Before you step under'),
         h('div', {}, 'Three deep breaths between reps. One more gulp, then down. Blow out on the way up.'),
         h('div', { class: 'mute small' }, 'Prop the phone where you can see it. You will not need to touch it.')),
+      h('button', { class: 'btn', onclick: () => rehearse(v.load) }, 'Two-minute rehearsal first'),
       h('div', { class: 'push stack' },
         st.safety && h('button', { class: 'btn' + (q.safe ? ' on' : ''), 'aria-pressed': q.safe ? 'true' : 'false', onclick: () => { q.safe = !q.safe; commit(s); } }, q.safe ? [ok(), 'Safeties set'] : 'Safeties set? Tap to confirm'),
         h('button', { class: 'btn gold xl', disabled: !q.safe, onclick: () => { q.phase = 'under'; q.unrackedAt = Date.now(); e.pending = { ...v }; commit(s); } }, 'UNRACK')));
@@ -216,7 +220,7 @@ function protocolView(s, e) {
     const time = h('div', { class: 'time gold', role: 'timer' });
     const paint = () => { const el = (Date.now() - e.hold.startedAt) / 1000; time.textContent = fixed ? clock(stg.hold - el) : mmss(el); return el; };
     paint();
-    setTicker(() => { const el = paint(); if (fixed && el >= stg.hold) { if (st.bell) bell(); if (st.flash) flash(); log(stg.hold); } });
+    setTicker(() => { const el = paint(); if (fixed && el >= stg.hold) { if (st.bell) bell(st.bellTone); if (st.flash) flash(); log(stg.hold); } });
     return h('div', { class: 'screen' }, head,
       h('div', { class: 'cue' }, fixed ? 'Hold. Highest tension.' : 'Hold. As long as you can.'),
       time,
@@ -287,11 +291,11 @@ function summary(s) {
     headline = l.reps >= 20 ? 'TWENTY. RACKED.' : `${l.reps} OF 20.`;
     line = `Squat ${kg(l.load)} kg × ${l.reps}.` + (l.reps >= 20 && delta > 0 ? ` Up ${kg(delta)} kg on last time.` : l.reps < 20 ? ' Same weight next time.' : '');
   }
-  const tpl = TEMPLATES.find((t) => t.id === s.templateId);
+  const tpl = templateById(s.templateId);
   const nxt = tpl ? buildSession(tpl, EXERCISES, PROTOCOLS, S.sessions, { today: s.date }).exercises.filter((x) => weighted(x) && x.target.load != null).slice(0, 4) : [];
   return h('div', { class: 'screen' },
     h('div', { class: 'label' }, `${s.dayType} BODY DAY · COMPLETE`),
-    h('div', { class: 'row', style: 'justify-content:flex-start;gap:14px' }, hero(stage() + (pumped ? 1 : 0), 112, 'hero-box'),
+    h('div', { class: 'row', style: 'justify-content:flex-start;gap:14px' }, hero(stage() + (pumped ? 1 : 0), 112, 'hero-box', true),
       h('div', { class: 'stack', style: 'gap:10px' }, h('div', { class: 'h1 gold' }, headline), h('div', {}, line))),
     h('div', { class: 'grid3' }, [[did.length, 'exercises'], [setsLogged(s), 'sets'], [mins, 'minutes']].map(([n, l]) => h('div', { class: 'panel', style: 'align-items:center;padding:12px 6px;gap:6px' }, h('div', { class: 'num', style: 'font-size:16px' }, n), h('div', { class: 'mute small' }, l)))),
     nxt.length > 0 && h('div', { class: 'panel' }, h('div', { class: 'label' }, `NEXT ${s.dayType} DAY`),
@@ -300,4 +304,21 @@ function summary(s) {
     h('div', { class: 'push grid2' },
       h('button', { class: 'btn', onclick: () => doUndo(s) }, 'Undo last set'),
       h('button', { class: 'btn on', onclick: () => { closeSession(); go('today'); } }, 'Back to Today')));
+}
+
+// ---------- mental rehearsal before the squat (MEN-01): text and a quiet two-minute clock ----------
+function rehearse(load) {
+  sheet((close) => {
+    const clockEl = h('div', { class: 'big gold center' }, '2:00'), end = Date.now() + 120000;
+    const iv = setInterval(() => { if (!clockEl.isConnected) return clearInterval(iv); clockEl.textContent = clock((end - Date.now()) / 1000); }, 250);
+    return [
+      h('div', { class: 'label gold' }, 'See it before you lift it'), clockEl,
+      h('div', {}, '1. Sit down. Breathe low and slow, into the belly.'),
+      h('div', {}, '2. Let your arms and legs go warm and heavy.'),
+      h('div', {}, `3. See the rack. See ${kg(load)} kg on the bar. Step under it.`),
+      h('div', {}, '4. Count all twenty, one at a time. Feel the breaths between them.'),
+      h('div', {}, '5. See the last rep go up. Rack it.'),
+      h('button', { class: 'btn line-gold', onclick: () => { clearInterval(iv); close(); } }, 'READY'),
+    ];
+  });
 }

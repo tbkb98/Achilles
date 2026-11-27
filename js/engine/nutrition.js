@@ -23,3 +23,16 @@ export function dayTotals(day) {
   for (const x of day.extras || []) { kcal += x.kcal; if (x.protein != null) protein += x.protein; else partial = true; }
   return { kcal: Math.round(kcal), protein: Math.round(protein), partial, eaten };
 }
+
+// Calorie suggestion from the weight trend (brief §12.5). planFrom: date the current plan started.
+// Returns null (not enough data), { kind: 'early' }, { kind: 'ontrack', rate } or { kind: 'change', delta, rate }.
+export function calorieSuggestion(weights, date, planFrom) {
+  const r1 = weeklyRate(weights, date), r0 = weeklyRate(weights, addDays(date, -7));
+  if (r1 == null) return null;
+  const age = planFrom ? Math.round((new Date(date + 'T00:00:00Z') - new Date(planFrom + 'T00:00:00Z')) / 86400000) : 999;
+  if (age < 14) return { kind: 'early', rate: r1 };
+  if (r0 == null) return { kind: 'ontrack', rate: r1 };
+  if (r1 < 0.5 && r0 < 0.5) return { kind: 'change', delta: 300, rate: r1 };
+  if (r1 > 1 && r0 > 1) return { kind: 'change', delta: -300, rate: r1 };
+  return { kind: 'ontrack', rate: r1 };
+}

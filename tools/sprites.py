@@ -9,7 +9,7 @@ ST={1:dict(s=4,w=3,t=1,b=0,f=1,n=0,th=2,c=1,L=3,g=1),
     4:dict(s=7,w=4,t=3,b=1,f=2,n=1,th=4,c=2,L=4,g=0),
     5:dict(s=8,w=4,t=3,b=2,f=3,n=1,th=4,c=3,L=4,g=0),
     6:dict(s=9,w=4,t=4,b=3,f=3,n=2,th=5,c=3,L=4,g=0)}
-def draw(p):
+def draw(p, flex=False):
     g=[[None]*W for _ in range(H)]
     def px(d,r,c):
         if 0<=r<H and 0<=d<=15:
@@ -18,6 +18,7 @@ def draw(p):
         for r in range(r0,r1+1):
             for d in range(d0,d1+1): px(d,r,c)
     s,w,t,b,f,n,th,c,L,gap=[p[k] for k in ('s','w','t','b','f','n','th','c','L','g')]
+    if flex: b += 1   # second frame: the biceps peak one pixel higher
     # head
     box(0,2,2,3,'k'); box(0,2,4,7,'s'); px(1,5,'e'); px(0,7,'d')
     box(0,n,8,8,'d' if n==0 else 's')
@@ -94,6 +95,7 @@ if __name__=='__main__':
     sheet=Image.new('RGBA',(6*32*8+7*16,32*8+32),(14,14,18,255))
     for i in range(1,7):
         im=img(draw(ST[i])); im.save(f'{out}/hero{i}.png')
+        img(draw(ST[i], True)).save(f'{out}/hero{i}b.png')
         sheet.alpha_composite(im,(16+(i-1)*(256+16),16))
     # icon: crop upper body of stage 6, gold palette
     g=draw(ST[6]); crop=[row[1:31] for row in g[1:23]]

@@ -77,7 +77,7 @@ img.px { image-rendering: pixelated; display: block; }
 .capsule .skip { background: var(--gold); color: #0E0E14; font-family: var(--px); font-size: 12px; min-width: 120px; }
 
 .tabbar { position: fixed; left: 50%; transform: translateX(-50%); width: min(448px, calc(100% - 32px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); height: 64px; display: flex; align-items: center; justify-content: space-around; background: rgba(255,255,255,.08); -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4); border: 1px solid rgba(255,255,255,.2); border-radius: 32px; z-index: 5; }
-.tabbar button { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 64px; min-height: 48px; justify-content: center; font-size: 16px; }
+.tabbar button { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 56px; min-height: 48px; justify-content: center; font-size: 15px; }
 .tabbar button.on { color: var(--gold); }
 .minibar { position: fixed; left: 50%; transform: translateX(-50%); width: min(448px, calc(100% - 32px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 86px); z-index: 5; }
 
@@ -107,3 +107,6 @@ img.px { image-rendering: pixelated; display: block; }
 .ok.nomargin { margin: 0; }
 .inp { font: inherit; font-size: 21px; color: var(--bone); background: var(--night); border: 2px solid var(--line); border-radius: 0; padding: 0 10px; width: 100%; height: 50px; -webkit-user-select: text; user-select: text; -webkit-appearance: none; appearance: none; }
 .btn.tight { padding: 0 6px; font-size: 19px; }
+.stepper.xs .stepper { gap: 6px; }
+.stepper.xs .step-btn { width: 44px; height: 44px; font-size: 22px; }
+.stepper.xs .step-val { font-size: 10px; white-space: nowrap; }

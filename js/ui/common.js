@@ -1,6 +1,7 @@
 import { h, kg } from '../dom.js';
-import { S, today } from '../state.js';
+import { today } from '../state.js';
 import { RULE, daysBetween } from '../engine/progression.js';
+import { forgeNow } from '../program.js';
 
 export const scheme = (e) => (e.stages ? `${e.stages.length} stages` : `${e.sets}×${e.reps}`);
 export function targetText(e) {
@@ -23,6 +24,7 @@ export function shortVal(e, v) {
   if (e.rule === RULE.BW) return `BW${v.ext ? ' + ' + kg(v.ext) : ''} × ${v.reps}`;
   return `${kg(v.load)} × ${v.reps}`;
 }
-export const stage = () => S.kv.stage || 1;
-export const hero = (st, size, cls) => h('img', { class: 'px ' + (cls || ''), src: `assets/sprites/hero${Math.min(6, Math.max(1, st))}.png`, width: size, height: size, alt: 'Your hero' });
+export const stage = () => { const f = forgeNow(); return f ? f.stage : 1; };
+export const heroSrc = (st, flex) => `assets/sprites/hero${Math.min(6, Math.max(1, st))}${flex ? 'b' : ''}.png`;
+export const hero = (st, size, cls, flex) => h('img', { class: 'px ' + (cls || ''), src: heroSrc(st, flex), width: size, height: size, alt: 'Your hero' });
 export const nameWithVariant = (e) => [e.name, e.variant ? h('span', { class: 'chip', style: 'margin-left:8px' }, e.variant.toUpperCase()) : null];
