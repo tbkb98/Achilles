@@ -1,0 +1,15 @@
+{
+  "name": "Achilles",
+  "short_name": "Achilles",
+  "description": "Training log for a Super Squats program. All data stays on this phone.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0E0E14",
+  "theme_color": "#0E0E14",
+  "icons": [
+    { "src": "assets/sprites/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/sprites/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
