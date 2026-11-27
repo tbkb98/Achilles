@@ -1,7 +1,8 @@
 // The program as T has it now: seed templates with his edits on top, visible pillars, and the hero score.
-import { TEMPLATES, PILLARS } from '../seed/program.js';
-import { S, settings } from './state.js';
+import { TEMPLATES, PILLARS, ADDED } from '../seed/program.js';
+import { S, settings, setKV } from './state.js';
 import { forgeLines } from './engine/forge.js';
+import { withAdded } from './engine/progression.js';
 
 export const templates = () => TEMPLATES.map((t) => (S.kv.templates && S.kv.templates[t.id] ? { ...t, items: S.kv.templates[t.id] } : t));
 export const templateById = (id) => templates().find((t) => t.id === id);
@@ -9,6 +10,14 @@ export function templateFor(type) {
   const all = templates();
   if (type === 'LOWER') return all.find((t) => t.id === 'lower');
   return all.find((t) => t.id === settings().upperTemplate && t.dayType === 'UPPER') || all.find((t) => t.dayType === 'UPPER');
+}
+
+// Runs once per ADDED.rev, so a lift T removes afterwards stays removed.
+export async function migrateRoutines() {
+  if ((S.kv.seedRev || 1) >= ADDED.rev) return;
+  const t = S.kv.templates;
+  if (t && Object.keys(t).length) await setKV('templates', Object.fromEntries(Object.entries(t).map(([id, items]) => [id, withAdded(id, items, TEMPLATES, ADDED.items)])));
+  await setKV('seedRev', ADDED.rev);
 }
 
 export function allPillars() {

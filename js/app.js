@@ -11,8 +11,9 @@ import { spaView } from './ui/recovery.js';
 import { progressView } from './ui/progress.js';
 import { pillarsView } from './ui/pillars.js';
 import { routinesView } from './ui/routines.js';
+import { migrateRoutines } from './program.js';
 
-export const VERSION = '1.2.1';
+export const VERSION = '1.3.0';
 
 // One ticker at a time: the visible screen registers what must update four times a second.
 let ticker = null;
@@ -111,7 +112,7 @@ export function applyUpdate() { S.wantReload = true; if (S.swReg && S.swReg.wait
 for (const ev of ['touchend', 'click']) document.addEventListener(ev, () => { if (activeSession()) unlockAudio(settings().loud); }, { passive: true, capture: true });
 
 (async function boot() {
-  try { await load(); } catch (e) {
+  try { await load(); await migrateRoutines(); } catch (e) {
     document.getElementById('app').replaceChildren(h('div', { class: 'screen' }, h('div', { class: 'panel' }, h('div', { class: 'label gold' }, 'Storage is not available'), h('div', {}, 'Achilles could not open its database on this device. Private browsing blocks it; open the app from the Home Screen icon.'))));
     return;
   }

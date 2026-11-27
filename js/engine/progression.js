@@ -22,7 +22,7 @@ export function daysBetween(aIso, bIso) {
 }
 
 export function allSetsHit(e) {
-  return e.reps.length >= e.prescribedSets && e.reps.every((r) => r >= e.prescribedReps);
+  return e.reps.length >= e.prescribedSets && e.reps.every((r) => r >= (e.prescribedTop || e.prescribedReps));   // a range (12–15) is earned at its top
 }
 
 // hist: entries for the SAME exercise and variant, oldest first.
@@ -44,6 +44,28 @@ export function nextTarget(rule, hist, inc) {
 
 export function layoffLoad(lastLoad, factor, inc) { return roundDown(lastLoad * factor, inc); }
 
+// One or two lighter sets before the first working set of a big barbell lift: the empty bar, then about 60%.
+export function warmupSets(load, bar, inc) {
+  if (load == null || load <= bar) return [];
+  const out = [{ load: bar, reps: 10 }], mid = roundDown(load * 0.6, inc || 2.5);
+  if (mid >= bar + 5) out.push({ load: mid, reps: 5 });
+  return out;
+}
+
+// Put lifts added to a built-in routine into an edited copy of it: after their anchor lift, else at the end.
+// added: [[routineId, lift, anchorLift|null]]. Lifts already present are left where they are.
+export function withAdded(id, items, seedTemplates, added) {
+  const seed = seedTemplates.find((t) => t.id === id), out = items.map((x) => ({ ...x }));
+  if (!seed) return out;
+  for (const [tid, ex, after] of added) {
+    const it = seed.items.find((x) => x.ex === ex);
+    if (tid !== id || !it || out.some((x) => x.ex === ex)) continue;
+    const i = after ? out.findIndex((x) => x.ex === after) : -1;
+    if (i >= 0) out.splice(i + 1, 0, { ...it }); else out.push({ ...it });
+  }
+  return out;
+}
+
 // Pull one exercise's history out of completed sessions.
 export function historyFor(sessions, exId, variant) {
   const out = [];
@@ -53,7 +75,7 @@ export function historyFor(sessions, exId, variant) {
       if (e.ex !== exId || (e.variant || '') !== (variant || '') || e.skipped || !e.logged.length) continue;
       out.push({
         date: s.date, load: e.logged[0].load ?? null, ext: e.logged[0].ext || 0,
-        reps: e.logged.map((l) => l.reps), prescribedSets: e.sets, prescribedReps: e.reps,
+        reps: e.logged.map((l) => l.reps), prescribedSets: e.sets, prescribedReps: e.reps, prescribedTop: e.top || 0,
         stagesDone: e.logged.length, stagesTotal: e.sets,
       });
     }
@@ -96,7 +118,7 @@ export function buildSession(template, lib, protocols, sessions, opts) {
     }
     return {
       ex: it.ex, variant: it.variant || '', name: def.name, rule: def.rule, equip: def.equip, inc: def.inc || 2.5,
-      sets: stages ? stages.length : it.sets, reps: it.reps || 0, stages,
+      sets: stages ? stages.length : it.sets, reps: it.reps || 0, top: !stages && it.top > it.reps ? it.top : 0, optional: !!it.optional, stages,
       linkedToNext: !!it.linkedToNext, rest: def.rest, trans: def.trans,
       target: { load: t.load ?? null, ext: t.ext || 0 }, suggestAdd: !!t.suggestAdd, first,
       last: last_ ? { date: last_.date, load: last_.load, ext: last_.ext, reps: last_.reps } : null,

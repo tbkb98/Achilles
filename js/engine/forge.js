@@ -11,7 +11,7 @@ export function stageOf(score) { return score >= 100 ? 6 : Math.floor(score / 20
 // ---- the five lines, worked out from what has been logged (development instructions §5.6) ----
 export const LINES = [['weight', 'Body weight'], ['squat', 'Squat × 20'], ['bench', 'Bench × 12'], ['row', 'Row × 15'], ['press', 'Press × 10']];
 const EX = { squat: 'squat', bench: 'bench', row: 'row', press: 'ohp' };
-const allHit = (e) => e.logged.length >= e.sets && e.logged.every((l) => l.reps >= e.reps);
+const allHit = (e) => e.logged.length >= e.sets && e.logged.every((l) => l.reps >= (e.top || e.reps));
 
 // inp: { sessions, weights, startWeight, goalWeight, variants: { bench, press } }
 // Baseline = the first load on record for the lift in its current variant; current = the best load

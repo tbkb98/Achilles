@@ -38,7 +38,7 @@ function liftHistory() {
     if (!e.logged.length || e.logged[0].load == null) continue;
     const key = `${e.ex}|${e.variant || ''}`;
     if (!map.has(key)) map.set(key, { key, ex: e.ex, name: e.name + (e.variant ? ` · ${e.variant}` : ''), pts: [] });
-    map.get(key).pts.push({ date: s.date, load: e.logged[0].load, hit: e.logged.length >= e.sets && e.logged.every((l) => l.reps >= e.reps) });
+    map.get(key).pts.push({ date: s.date, load: e.logged[0].load, hit: e.logged.length >= e.sets && e.logged.every((l) => l.reps >= (e.top || e.reps)) });
   }
   return map;
 }

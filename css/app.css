@@ -27,6 +27,11 @@ img.px { image-rendering: pixelated; display: block; }
 
 .label { font-family: var(--px); font-size: 10px; line-height: 1.5; color: var(--mute); letter-spacing: 0; text-transform: uppercase; }
 .label.gold, .gold { color: var(--gold); }
+.check { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 6px 10px; border: 2px solid var(--line); text-align: left; }
+.check .box { width: 26px; height: 26px; flex: none; border: 2px solid var(--mute); display: flex; align-items: center; justify-content: center; color: transparent; }
+.check .box .ok { margin: 0; }
+.check .what { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.check.on { border-color: var(--gold); } .check.on .box { border-color: var(--gold); color: var(--gold); }
 .datehead { font-family: var(--px); font-size: 13px; line-height: 1.5; color: var(--bone); text-transform: uppercase; }
 .mute { color: var(--mute); }
 .small { font-size: 18px; }

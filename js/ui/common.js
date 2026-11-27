@@ -3,7 +3,8 @@ import { today } from '../state.js';
 import { RULE, daysBetween } from '../engine/progression.js';
 import { forgeNow } from '../program.js';
 
-export const scheme = (e) => (e.stages ? `${e.stages.length} stages` : `${e.sets}×${e.reps}`);
+export const repText = (e) => (e.top ? `${e.reps}–${e.top}` : `${e.reps}`);
+export const scheme = (e) => (e.stages ? `${e.stages.length} stages` : `${e.sets}×${repText(e)}`);
 export function targetText(e) {
   if (e.rule === RULE.UNW) return 'no weight';
   if (e.rule === RULE.BW) return e.target.ext ? `BW + ${kg(e.target.ext)} kg` : 'bodyweight';

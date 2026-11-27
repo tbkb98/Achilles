@@ -121,7 +121,7 @@ export function todayView() {
       h('button', { class: 'btn', onclick: checkIn }, light ? 'Change' : 'Check in')),
     !S.sessions.length && h('div', { class: 'panel goldline' }, h('div', { class: 'label gold' }, 'No history yet'), h('div', {}, 'Import your setup file in Settings to bring in your latest loads. Or just start: each lift asks for its load once.')),
     h('div', { class: 'panel' }, h('div', { class: 'label' }, "TODAY'S TARGETS"),
-      preview.exercises.map((e) => h('div', { class: 'list-row' }, h('span', {}, nameWithVariant(e), h('span', { class: 'mute' }, ` · ${scheme(e)}`)), h('span', { class: 'gold', style: 'white-space:nowrap' }, targetText(e))))),
+      preview.exercises.map((e) => h('div', { class: 'list-row' }, h('span', {}, nameWithVariant(e), h('span', { class: 'mute' }, ` · ${scheme(e)}${e.optional ? ' · optional' : ''}`)), h('span', { class: 'gold', style: 'white-space:nowrap' }, targetText(e))))),
     h('button', { class: 'panel', style: 'text-align:left;width:100%', 'aria-label': 'Open the eating log', onclick: () => go('eat') },
       h('div', { class: 'row' }, h('div', { class: 'label' }, 'FUEL'), h('div', { class: 'mute small' }, kcalTarget ? `${tot.eaten} of ${p ? p.slots.length : 0} meals` : 'no plan yet')),
       h('div', { class: 'row top' }, h('div', { class: 'num', style: 'font-size:16px' }, Math.round(tot.kcal).toLocaleString()), h('div', { class: 'mute small' }, kcalTarget ? `of ${kcalTarget.toLocaleString()} kcal` : 'kcal today')),

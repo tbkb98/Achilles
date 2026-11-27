@@ -11,7 +11,13 @@ export function pendingFor(e) {
   if (e.pending) return e.pending;
   const prev = e.logged[e.logged.length - 1];
   const stage = e.stages ? e.stages[Math.min(e.logged.length, e.stages.length - 1)] : null;
-  return { load: prev ? prev.load : e.target.load, ext: prev ? prev.ext : e.target.ext || 0, reps: stage ? stage.reps : e.reps };
+  // In a rep range the set starts from what was just done, else from last time at this load, never below the bottom of the range.
+  let reps = stage ? stage.reps : e.reps;
+  if (e.top && !stage) {
+    const was = prev ? prev.reps : e.last && e.last.load === e.target.load && e.last.reps.length ? e.last.reps[Math.min(e.logged.length, e.last.reps.length - 1)] : null;
+    if (was != null) reps = Math.max(e.reps, Math.min(e.top, was));
+  }
+  return { load: prev ? prev.load : e.target.load, ext: prev ? prev.ext : e.target.ext || 0, reps };
 }
 
 function finish(s, now) { s.status = 'COMPLETED'; s.endedAt = now; s.timer = null; }

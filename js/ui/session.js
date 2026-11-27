@@ -2,13 +2,15 @@
 import { h, kg, clock, stepper, bar, ok } from '../dom.js';
 import { S, settings, saveSession, deleteSession, closeSession } from '../state.js';
 import { cur, logSet, undo, skip, doLater, endNow, adjustTimer, pendingFor, isSquat, addExercise } from '../engine/session.js';
-import { setsPlanned, setsLogged, buildSession, RULE } from '../engine/progression.js';
+import { setsPlanned, setsLogged, buildSession, warmupSets, RULE } from '../engine/progression.js';
 import { plates } from '../engine/plates.js';
 import { EXERCISES, PROTOCOLS, POWER, SQUAT_CUES } from '../../seed/program.js';
+import { WARMUP, COOLDOWN, GRIP, stretchAfter, stretchDuring } from '../../seed/mobility.js';
 import { templateById, visiblePillars } from '../program.js';
 import { bell, tick, flash, haptic } from '../platform/device.js';
 import { render, setTicker, go, sheet } from '../app.js';
-import { hero, heroSrc, stage, lastText, shortVal, targetText, scheme, nameWithVariant } from './common.js';
+import { hero, heroSrc, stage, lastText, shortVal, targetText, scheme, repText, nameWithVariant } from './common.js';
+import { checklist, mobilitySheet, dailyFour } from './mobility.js';
 import { spaCard } from './recovery.js';
 
 let saveT = null;
@@ -24,6 +26,7 @@ export function sessionView(s) {
   if (s.status === 'COMPLETED') return summary(s);
   if (s.timer && s.timer.endsAt <= Date.now()) { s.restOver = s.timer.endsAt; s.timer = null; saveSession(s); } // ended while away
   const e = cur(s);
+  if (!s.warm && !setsLogged(s) && settings().warmup) return warmView(s);
   if (s.timer) return restView(s, e);
   if (isSquat(e)) return squatView(s, e);
   if (e.stages) return protocolView(s, e);
@@ -56,6 +59,25 @@ function fillPlates(box, load) {
   if (p.leftover > 0) box.append(h('span', { class: 'mute small' }, `${kg(p.leftover * 2)} kg short with your plates`));
 }
 const hasPlates = (e) => !!(EXERCISES[e.ex] && EXERCISES[e.ex].plates);
+const def = (e) => EXERCISES[e.ex] || {};
+
+// ---------- pre-workout warm-up: five to seven minutes before the first lift ----------
+function warmView(s) {
+  const items = WARMUP[s.dayType] || WARMUP.UPPER, ticks = s.warmTicks || (s.warmTicks = []);
+  const leave = (done) => { s.warm = { done, at: Date.now() }; commit(s); };
+  return h('div', { class: 'screen' }, header(s, 'WARM-UP'),
+    h('div', { class: 'row top' }, h('div', { class: 'h1' }, 'WARM UP FIRST'), h('span', { class: 'label gold', style: 'white-space:nowrap' }, '5–7 MIN')),
+    h('div', { class: 'stack', style: 'gap:8px' }, checklist(items, ticks, () => saveSession(s))),
+    h('div', { class: 'push stack' },
+      h('button', { class: 'btn gold xl', onclick: () => { haptic(); leave(true); } }, ok(), 'WARM · FIRST LIFT'),
+      h('button', { class: 'btn', onclick: () => leave(false) }, 'Skip the warm-up')));
+}
+// Lighter sets before the first working set of a big lift. Shown, not logged.
+function warmupLine(e, load) {
+  if (!def(e).warm || e.logged.length) return null;
+  const w = warmupSets(load, settings().bar, e.inc);
+  return w.length ? h('div', { class: 'gold small' }, `Warm-up sets first: ${w.map((x) => `${kg(x.load)} kg × ${x.reps}`).join(', then ')}.`) : null;
+}
 
 function describe(e, v) {
   if (e.stages) return `${kg(v.load)} kg · ${v.reps} reps`;
@@ -89,19 +111,25 @@ function setView(s, e) {
   const relabel = () => { doneTxt.textContent = `DONE ${shortVal(e, v)}`; if (w && hasPlates(e)) fillPlates(plateBox, v.load); };
   const changed = () => { e.pending = { ...v }; saveSoon(s); relabel(); };
   relabel();
-  const last = lastText(e);
+  const last = lastText(e), d = def(e);
+  const warmBox = h('div', {}); const rewarm = () => warmBox.replaceChildren(...[warmupLine(e, v.load)].filter(Boolean)); rewarm();
+  const bigger = w && d.jump && n === 0 && !e.first && e.last && e.last.load != null && e.target.load === e.last.load + e.inc && v.load === e.target.load ? e.last.load + d.jump : null;
   return h('div', { class: 'screen' }, header(s), pumpRow(s),
     h('div', { class: `panel ${s.dayType === 'LOWER' ? 'ox' : 'navy'}` },
       h('div', { class: 'row top' }, h('div', { class: 'h1' }, nameWithVariant({ name: up(e), variant: e.variant })), h('span', { class: 'label gold', style: 'white-space:nowrap' }, `SET ${n + 1} / ${e.sets}`)),
-      h('div', { class: 'row' }, h('span', { class: 'mute' }, 'Target'), h('span', {}, `${targetText(e)} × ${e.reps}`)),
+      h('div', { class: 'row' }, h('span', { class: 'mute' }, 'Target'), h('span', {}, `${targetText(e)} × ${repText(e)}`)),
       last && h('div', { class: 'row' }, h('span', { class: 'mute' }, 'Last time'), h('span', {}, last)),
       e.first && w && h('div', { class: 'gold small' }, 'First time with this setup. Set the load once and it is remembered.'),
       EXERCISES[e.ex] && EXERCISES[e.ex].each && h('div', { class: 'mute small' }, 'Weight per dumbbell.'),
-      overdueNote(s)),
+      d.cue && n === 0 && h('div', { class: 'mute small' }, d.cue),
+      e.top > 0 && n === 0 && h('div', { class: 'mute small' }, `More weight once every set reaches ${e.top}.`),
+      warmBox, overdueNote(s)),
+    bigger && h('button', { class: 'btn line-gold', onclick: () => { e.pending = { ...v, load: bigger }; commit(s); } }, `ALL SETS FELT EASY LAST TIME? TAKE ${kg(bigger)} KG`),
+    e.optional && n === 0 && h('button', { class: 'btn', onclick: () => { skip(s, Date.now()); commit(s); } }, 'Optional lift · skip it today'),
     e.suggestAdd && n === 0 && h('button', { class: 'btn line-gold', onclick: () => { e.pending = { ...v, ext: v.ext + e.inc }; e.suggestAdd = false; commit(s); } }, `ALL REPS HIT LAST TIME · ADD ${kg(e.inc)} KG`),
     h('div', { class: 'push stack', style: 'gap:14px' },
       w && hasPlates(e) && plateBox,
-      w && stepper({ value: v.load, step: e.inc, fmt: (x) => `${kg(x)} kg`, label: 'weight', onChange: (x) => { v.load = x; changed(); } }),
+      w && stepper({ value: v.load, step: e.inc, fmt: (x) => `${kg(x)} kg`, label: 'weight', onChange: (x) => { v.load = x; changed(); rewarm(); } }),
       e.rule === RULE.BW && stepper({ value: v.ext, step: e.inc, fmt: (x) => (x ? `BW + ${kg(x)} kg` : 'bodyweight'), label: 'added weight', onChange: (x) => { v.ext = x; changed(); } }),
       stepper({ value: v.reps, step: 1, fmt: (x) => `${x} reps`, label: 'reps', onChange: (x) => { v.reps = x; changed(); } }),
       done, footer(s, e)));
@@ -118,6 +146,12 @@ function restView(s, e) {
   const t = s.timer, st = settings(), isRest = t.kind === 'rest', v = pendingFor(e);
   const time = h('div', { class: 'time gold', role: 'timer' });
   const fill = h('div'), quote = h('div', { class: 'quote' }), by = h('div', { class: 'mute small' });
+  // what to stretch: during toe raises between sets, otherwise for the lift just finished
+  let stretch = null;
+  if (st.stretch) {
+    if (isRest) stretch = stretchDuring(e.ex);
+    else { let prev = null, at = -1; s.exercises.forEach((x) => { const l = x.logged[x.logged.length - 1]; if (l && l.at > at) { at = l.at; prev = x; } }); stretch = prev ? stretchAfter(prev.ex, s.dayType) : null; }
+  }
   const pillars = visiblePillars(), st0 = stage() + (setsLogged(s) >= setsPlanned(s) ? 1 : 0), man = hero(st0, 128);
   const paint = () => {
     const rem = (t.endsAt - Date.now()) / 1000;
@@ -141,6 +175,7 @@ function restView(s, e) {
     h('div', { class: 'label center' }, isRest ? `${up(e)} · ${e.logged.length} OF ${e.sets} DONE` : `UP NEXT · ${up(e)}`),
     time, h('div', { class: 'bar' }, fill),
     h('div', { style: 'display:flex;justify-content:center' }, man),
+    stretch && h('div', { class: 'row' }, h('span', { class: 'label gold', style: 'white-space:nowrap' }, 'STRETCH 30–60 S'), h('span', { style: 'text-align:right' }, stretch)),
     st.pillars && h('div', { class: 'panel' }, quote, by),
     h('div', { class: 'row' }, h('span', { class: 'mute' }, 'Next'), h('span', { style: 'text-align:right' }, isRest ? `${e.stages ? 'Stage' : 'Set'} ${e.logged.length + 1} · ${describe(e, v)}` : describe(e, v))),
     h('div', { class: 'push stack' },
@@ -160,12 +195,14 @@ function squatView(s, e) {
 
   if (q.phase === 'ready') {
     const plateBox = h('div', { class: 'plates' }); fillPlates(plateBox, v.load);
+    const warmBox = h('div', {}); const rewarm = (x) => warmBox.replaceChildren(...[warmupLine(e, x)].filter(Boolean)); rewarm(v.load);
     const last = lastText(e);
     return h('div', { class: 'screen black' }, header(s), top,
-      stepper({ value: v.load, step: e.inc, fmt: (x) => `${kg(x)} kg`, label: 'weight', onChange: (x) => { v.load = x; e.pending = { ...v }; saveSoon(s); fillPlates(plateBox, x); } }),
+      stepper({ value: v.load, step: e.inc, fmt: (x) => `${kg(x)} kg`, label: 'weight', onChange: (x) => { v.load = x; e.pending = { ...v }; saveSoon(s); fillPlates(plateBox, x); rewarm(x); } }),
       plateBox,
       last && h('div', { class: 'row' }, h('span', { class: 'mute' }, 'Last time'), h('span', {}, last)),
       e.first && h('div', { class: 'gold small' }, 'First squat in the app. Set the load once and it is remembered.'),
+      warmBox,
       h('div', { class: 'panel' }, h('div', { class: 'label gold' }, 'Before you step under'),
         h('div', {}, 'Three deep breaths between reps. One more gulp, then down. Blow out on the way up.'),
         h('div', { class: 'mute small' }, 'Prop the phone where you can see it. You will not need to touch it.')),
@@ -300,6 +337,11 @@ function summary(s) {
     h('div', { class: 'grid3' }, [[did.length, 'exercises'], [setsLogged(s), 'sets'], [mins, 'minutes']].map(([n, l]) => h('div', { class: 'panel', style: 'align-items:center;padding:12px 6px;gap:6px' }, h('div', { class: 'num', style: 'font-size:16px' }, n), h('div', { class: 'mute small' }, l)))),
     nxt.length > 0 && h('div', { class: 'panel' }, h('div', { class: 'label' }, `NEXT ${s.dayType} DAY`),
       nxt.map((x) => h('div', { class: 'list-row' }, h('span', {}, `${x.name} · ${scheme(x)}`), h('span', { class: 'gold', style: 'white-space:nowrap' }, `${kg(x.target.load)} kg`)))),
+    h('button', { class: 'btn' + (s.cool ? ' on' : ''), onclick: () => mobilitySheet({
+      title: 'Cool-down', sub: 'Eight to ten minutes, after every session.',
+      groups: [{ items: COOLDOWN }, ...(s.dayType === 'UPPER' ? [{ label: 'AFTER FAT GRIPZ AND GRIP WORK', items: GRIP }] : [])],
+      foot: dailyFour(), done: !!s.cool, doneLabel: 'COOL-DOWN DONE',
+      onDone: () => { s.cool = true; commit(s); }, onUndo: () => { s.cool = false; commit(s); } }) }, s.cool ? [ok(), 'Cool-down done'] : 'Cool-down · 8–10 min of stretching'),
     h('div', { class: 'panel ox' }, h('div', { class: 'label' }, 'RECOVERY · PHONE STAYS OUTSIDE'), spaCard(s.date, s.id)),
     h('div', { class: 'push grid2' },
       h('button', { class: 'btn', onclick: () => doUndo(s) }, 'Undo last set'),

@@ -2,6 +2,7 @@
 import { h, kg, stepper } from '../dom.js';
 import { S, settings, setSetting, setKV, exportAll, importData, eraseAll, toCSV, toSheetCSV, activeSession, today } from '../state.js';
 import { TEMPLATES } from '../../seed/program.js';
+import { migrateRoutines } from '../program.js';
 import { go } from '../app.js';
 import { bell, unlockAudio, shareFile, BELL_TONES } from '../platform/device.js';
 import { render, toast, applyUpdate, VERSION } from '../app.js';
@@ -23,6 +24,7 @@ function pickFile(mode) {
     const f = inp.files && inp.files[0]; inp.remove(); if (!f) return;
     try {
       const n = await importData(JSON.parse(await f.text()), mode);
+      await migrateRoutines();
       toast(mode === 'replace' ? 'Backup restored.' : n ? `Imported ${n} records.` : 'Nothing new in that file.');
     } catch (e) { toast(e instanceof SyntaxError ? 'That file is not readable.' : e.message); }
     render();
@@ -59,6 +61,7 @@ export function settingsView() {
 
     h('div', { class: 'panel' }, h('div', { class: 'label gold' }, 'Session'),
       toggle('Ask "Safeties set?" before the squat', 'safety'), toggle('Pillars during rest', 'pillars'),
+      toggle('Warm-up list before the first lift', 'warmup'), toggle('Stretch prompt between lifts', 'stretch'),
       h('div', { class: 'stepper sm' }, h('span', { style: 'width:70px' }, 'Sauna'), stepper({ value: st.sauna, step: 1, max: 60, fmt: (x) => `${x} min`, label: 'sauna minutes', onChange: (x) => setSetting('sauna', x) })),
       h('div', { class: 'stepper sm' }, h('span', { style: 'width:70px' }, 'Hammam'), stepper({ value: st.hammam, step: 1, max: 60, fmt: (x) => `${x} min`, label: 'hammam minutes', onChange: (x) => setSetting('hammam', x) }))),
 

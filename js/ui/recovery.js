@@ -3,6 +3,8 @@
 import { h, stepper, ok, clock } from '../dom.js';
 import { S, settings, saveRecovery, deleteRecovery, setKV, activeSession } from '../state.js';
 import { bell, flash, haptic, unlockAudio } from '../platform/device.js';
+import { MORNING, EVENING } from '../../seed/mobility.js';
+import { mobilitySheet, dailyFour } from './mobility.js';
 import { render, go, setTicker } from '../app.js';
 
 const editing = new Set();
@@ -75,15 +77,16 @@ export function spaView() {
         h('button', { class: 'btn', onclick: async () => { await setKV('spaTimer', null); back(); } }, 'Cancel, log nothing'))));
 }
 
-// Stretching check-offs (SPA-04).
+// Morning and evening mobility: the list opens, one button marks it done (SPA-04).
 export function recoveryExtras(date) {
   const tog = (label, type) => {
     const on = of(date, type).length > 0;
-    return h('button', { class: 'btn tight' + (on ? ' on' : ''), 'aria-pressed': on ? 'true' : 'false', onclick: async () => {
-      if (on) for (const r of of(date, type)) await deleteRecovery(r.id);
-      else await saveRecovery({ id: `rec-${date}-${type}`, date, type, loggedAt: new Date().toISOString() });
-      render();
-    } }, on && ok(), label);
+    const am = type === 'STRETCH_AM';
+    return h('button', { class: 'btn tight' + (on ? ' on' : ''), 'aria-pressed': on ? 'true' : 'false', onclick: () => mobilitySheet({
+      title: am ? 'Morning mobility' : 'Evening mobility', sub: am ? 'Five minutes. Energy and posture.' : 'Ten minutes. Recovery and flexibility.',
+      groups: [{ items: am ? MORNING : EVENING }], foot: dailyFour(), done: on, doneLabel: am ? 'MORNING DONE' : 'EVENING DONE',
+      onDone: async () => { await saveRecovery({ id: `rec-${date}-${type}`, date, type, loggedAt: new Date().toISOString() }); render(); },
+      onUndo: async () => { for (const r of of(date, type)) await deleteRecovery(r.id); render(); } }) }, on && ok(), label);
   };
   return h('div', { class: 'grid2' }, tog('Stretch AM', 'STRETCH_AM'), tog('Stretch PM', 'STRETCH_PM'));
 }

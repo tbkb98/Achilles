@@ -3,7 +3,7 @@ import * as db from './store/db.js';
 
 export const S = { sessions: [], weights: [], recovery: [], days: [], kv: {}, ready: false };
 export const DEFAULTS = {
-  bar: 20, plates: [25, 20, 10, 5, 2.5, 1.25], bell: true, loud: true, flash: true, tick: true,
+  bar: 20, plates: [25, 20, 10, 5, 2.5, 1.25], bell: true, loud: true, flash: true, tick: true, warmup: true, stretch: true,
   safety: true, pillars: true, upperTemplate: 'upper-revised', sauna: 15, hammam: 15, bellTone: 'ring',
 };
 
