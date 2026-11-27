@@ -52,7 +52,9 @@ async function acquire() {
 export function keepAwake(on) { wantLock = on; if (on) acquire(); else if (lock) { lock.release().catch(() => {}); lock = null; } }
 document.addEventListener('visibilitychange', acquire);
 
-// --- haptic tick: only fires inside a tap, through Safari's switch control ---
+// --- haptic tick, through Safari's switch control ---
+// Works on iOS 17.4 to 26.4. Apple closed this route in iOS 26.5, so on newer systems the call does nothing;
+// a web app has no other way to reach the Taptic Engine. Kept because it is harmless and still ticks on older phones.
 export function haptic() {
   try {
     if (!hapticLabel) {

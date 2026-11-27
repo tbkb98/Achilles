@@ -103,12 +103,13 @@ export function todayView() {
   const backupAge = S.kv.lastBackupAt ? daysBetween(S.kv.lastBackupAt.slice(0, 10), d) : null;
 
   return h('div', { class: 'screen tabbed' },
-    h('div', { class: 'row' }, h('div', { class: 'label' }, new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })), h('div', { class: 'label gold' }, trained ? [ok(), 'TRAINED TODAY'] : 'ACHILLES')),
+    h('div', { class: 'datehead' }, new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })),
     S.updateReady && h('button', { class: 'btn line-gold', onclick: () => go('settings') }, 'UPDATE READY · OPEN SETTINGS'),
     h('div', { class: 'banner ' + due }, hero(stage(), 96, 'hero-box'),
       h('div', { class: 'stack', style: 'gap:10px;min-width:0' },
         h('div', { class: 'h1' }, due, h('br'), 'BODY DAY'),
-        h('div', {}, lead ? `${lead.name} ${kg(lead.target.load)} kg × ${lead.reps || lead.stages[0].reps}.` + (lead.last && !lead.first ? ` Last time ${kg(lead.last.load)}.` : '') : 'First session: you set each load once.'))),
+        h('div', {}, lead ? `${lead.name} ${kg(lead.target.load)} kg × ${lead.reps || lead.stages[0].reps}.` + (lead.last && !lead.first ? ` Last time ${kg(lead.last.load)}.` : '') : 'First session: you set each load once.'),
+        trained && h('div', { class: 'label gold' }, ok(), 'TRAINED TODAY'))),
     h('button', { class: 'btn gold', onclick: onStart }, a ? (a.status === 'ACTIVE' ? 'RESUME SESSION' : 'SESSION SUMMARY') : 'START SESSION'),
     !a && h('button', { class: 'btn', onclick: () => { setKV('dayOverride', { date: d, type: other }); render(); } }, `Switch to ${other.toLowerCase()} body day`),
     f && f.stage > seen && h('div', { class: 'panel goldline', style: 'align-items:center;text-align:center' }, hero(f.stage, 128, '', true),

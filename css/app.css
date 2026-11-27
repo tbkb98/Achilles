@@ -27,6 +27,7 @@ img.px { image-rendering: pixelated; display: block; }
 
 .label { font-family: var(--px); font-size: 10px; line-height: 1.5; color: var(--mute); letter-spacing: 0; text-transform: uppercase; }
 .label.gold, .gold { color: var(--gold); }
+.datehead { font-family: var(--px); font-size: 13px; line-height: 1.5; color: var(--bone); text-transform: uppercase; }
 .mute { color: var(--mute); }
 .small { font-size: 18px; }
 .num { font-family: var(--px); }
@@ -94,9 +95,9 @@ img.px { image-rendering: pixelated; display: block; }
 .ok { width: .95em; height: .8em; display: inline-block; vertical-align: -0.05em; margin-right: .45em; flex: none; }
 .ok.after { margin: 0 0 0 .45em; }
 
-/* Installed on the Home Screen: iOS fades content right under the status bar, so start lower. */
+/* Installed on the Home Screen: iOS shades whatever sits right under the status bar, so the first row starts well below it. */
 @media (display-mode: standalone) {
-  .screen { padding-top: calc(max(env(safe-area-inset-top, 0px), 44px) + 26px); }
+  .screen { padding-top: calc(max(env(safe-area-inset-top, 0px), 44px) + 48px); }
 }
 .meal { display: flex; gap: 6px; }
 .meal-main { flex: 1; display: flex; align-items: center; gap: 10px; min-height: 54px; padding: 4px 10px; background: var(--panel); border: 2px solid var(--line); color: #C9C9D6; text-align: left; }

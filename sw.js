@@ -1,5 +1,5 @@
 // Offline shell. Cache-first: after the first load the app never needs the network.
-const VERSION = 'achilles-1.2.0';
+const VERSION = 'achilles-1.2.1';
 const FILES = [
   './',
   './assets/fonts/Jersey15.woff2',

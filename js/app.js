@@ -12,7 +12,7 @@ import { progressView } from './ui/progress.js';
 import { pillarsView } from './ui/pillars.js';
 import { routinesView } from './ui/routines.js';
 
-export const VERSION = '1.2.0';
+export const VERSION = '1.2.1';
 
 // One ticker at a time: the visible screen registers what must update four times a second.
 let ticker = null;
