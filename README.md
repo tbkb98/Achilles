@@ -13,19 +13,31 @@ A training log for a Super Squats program, built as a Home Screen web app for iP
 
 Always open Achilles from the Home Screen icon. Safari and the Home Screen app keep separate storage.
 
-## What milestone 1 does
+## What it does (version 1.1)
 
+**Training**
 - Shows what is due today (Upper or Lower) with the target load for every lift, worked out from your last session.
 - Logs a set in one tap. Steppers correct weight and reps without a keyboard; hold a stepper to repeat.
 - Breathing Squat Mode: a display you read from under the bar, with time-based cues. You confirm the reps after racking.
 - Leg-extension protocol runner with a 20-second hold timer and a stopwatch for the last hold.
-- Rest and transition timers based on clock time, with a bell, a flash and a tick at ten seconds. The screen stays awake during a session.
-- Undo, skip, do later, add an exercise, session note, end early.
-- Session summary with next targets and a one-tap sauna + hammam log.
-- Restores the exact session state after the app is closed or killed.
-- Backup to a JSON file, restore from it, export sets as CSV.
+- Rest and transition timers based on clock time, with a ring bell, a flash and a tick at ten seconds. The screen stays awake during a session.
+- Undo, skip, do later, add an exercise, session note, end early. Restores the exact session after the app is closed or killed.
+- History with editing: fix reps or loads after the fact, or delete a session.
 
-Not yet: eating log, body-weight trend, progress charts, hero stages (milestones 2 and 3).
+**Eating**
+- Your meal plan as slots, one tap each. Portions (½ to 2×), "something different today", skipped, extras, and a milk counter.
+- Each meal can carry a protein value; totals count what has one.
+- Changing a meal changes the plan from today on. Earlier days keep the target they were logged against.
+
+**Body and recovery**
+- Morning weigh-in, 7-day average, and change on the week before (needs four weigh-ins in a week).
+- Sauna and hammam: log the minutes you actually did, change them later, or run a timer that keeps counting past the bell and logs the real time.
+- Stretching check-offs and a reminder of your own rule if you log cold exposure within four hours of training.
+
+**Data**
+- Backup to a JSON file, restore from it, export sets as CSV, export in the wide sheet layout.
+
+Not yet: hero stages, progress charts, goals, pillars library, template editor (milestone 3).
 
 ## Limits of a web app on iPhone
 
@@ -51,8 +63,8 @@ python3 tools/precache.py .        # refresh the offline file list in sw.js afte
 python3 tools/sprites.py assets/sprites   # regenerate hero sprites (needs Pillow)
 ```
 
-After changing any file, bump `VERSION` in `sw.js` (and `js/app.js`) so installed copies see the update.
+After changing any file, bump `VERSION` in `sw.js` (and `js/app.js`) so installed copies see the update. The site is served from the `gh-pages` branch: push `main` to both.
 
-Layout: `js/engine/` holds the pure rules (progression, layoff, plates, schedule, session flow), `js/ui/` the screens, `js/state.js` and `js/store/db.js` the on-device storage, `seed/program.js` the exercise library and templates.
+Layout: `js/engine/` holds the pure rules (progression, layoff, plates, schedule, session flow, eating totals and weight trend), `js/ui/` the screens, `js/state.js` and `js/store/db.js` the on-device storage, `seed/program.js` the exercise library and templates.
 
 Fonts: Press Start 2P and Jersey 15, both under the SIL Open Font License (licences in `assets/fonts/`).

@@ -1,6 +1,6 @@
 // The live workout: set card, rest timer, breathing squat mode, protocol runner, summary.
 import { h, kg, clock, stepper, bar, ok } from '../dom.js';
-import { S, settings, saveSession, deleteSession, closeSession, saveRecovery, uid } from '../state.js';
+import { S, settings, saveSession, deleteSession, closeSession } from '../state.js';
 import { cur, logSet, undo, skip, doLater, endNow, adjustTimer, pendingFor, isSquat, addExercise } from '../engine/session.js';
 import { setsPlanned, setsLogged, buildSession, RULE } from '../engine/progression.js';
 import { plates } from '../engine/plates.js';
@@ -8,8 +8,9 @@ import { EXERCISES, TEMPLATES, PROTOCOLS, PILLARS, POWER, SQUAT_CUES } from '../
 import { bell, tick, flash, haptic } from '../platform/device.js';
 import { render, setTicker, go, sheet } from '../app.js';
 import { hero, stage, lastText, shortVal, targetText, scheme, nameWithVariant } from './common.js';
+import { spaCard } from './recovery.js';
 
-let saveT = null, spaEdit = false;
+let saveT = null;
 const commit = (s) => { clearTimeout(saveT); saveSession(s); render(); };
 const saveSoon = (s) => { clearTimeout(saveT); saveT = setTimeout(() => saveSession(s), 300); };
 const doLog = (s, v) => { haptic(); logSet(s, v, Date.now()); s.restOver = null; commit(s); };
@@ -278,7 +279,7 @@ function addMenu(s) {
 // ---------- summary and spa quick log (SES-17, SPA-01) ----------
 function summary(s) {
   if (!setsLogged(s)) { deleteSession(s.id); closeSession(); setTimeout(() => go('today')); return h('div', { class: 'screen' }); }
-  const st = settings(), mins = Math.max(1, Math.round((s.endedAt - s.startedAt) / 60000));
+  const mins = Math.max(1, Math.round((s.endedAt - s.startedAt) / 60000));
   const did = s.exercises.filter((x) => x.logged.length), sq = did.find(isSquat), pumped = setsLogged(s) >= setsPlanned(s);
   let headline = 'DONE.', line = `${did.length} exercises. ${setsLogged(s)} sets.`;
   if (sq) {
@@ -288,16 +289,6 @@ function summary(s) {
   }
   const tpl = TEMPLATES.find((t) => t.id === s.templateId);
   const nxt = tpl ? buildSession(tpl, EXERCISES, PROTOCOLS, S.sessions, { today: s.date }).exercises.filter((x) => weighted(x) && x.target.load != null).slice(0, 4) : [];
-  const spa = S.recovery.filter((r) => r.sessionId === s.id);
-  const m = s.spa || (s.spa = { sauna: st.sauna, hammam: st.hammam });
-  const logSpa = () => {
-    const now = new Date().toISOString();
-    if (m.sauna > 0) saveRecovery({ id: uid(), date: s.date, type: 'SAUNA', durationMin: m.sauna, sessionId: s.id, loggedAt: now });
-    if (m.hammam > 0) saveRecovery({ id: uid(), date: s.date, type: 'HAMMAM', durationMin: m.hammam, sessionId: s.id, loggedAt: now });
-    haptic(); spaEdit = false; commit(s);
-  };
-  const title = h('div', { style: 'font-size:20px' }, `Sauna ${m.sauna} min + Hammam ${m.hammam} min`);
-  const retitle = () => { title.textContent = `Sauna ${m.sauna} min + Hammam ${m.hammam} min`; saveSoon(s); };
   return h('div', { class: 'screen' },
     h('div', { class: 'label' }, `${s.dayType} BODY DAY · COMPLETE`),
     h('div', { class: 'row', style: 'justify-content:flex-start;gap:14px' }, hero(stage() + (pumped ? 1 : 0), 112, 'hero-box'),
@@ -305,15 +296,8 @@ function summary(s) {
     h('div', { class: 'grid3' }, [[did.length, 'exercises'], [setsLogged(s), 'sets'], [mins, 'minutes']].map(([n, l]) => h('div', { class: 'panel', style: 'align-items:center;padding:12px 6px;gap:6px' }, h('div', { class: 'num', style: 'font-size:16px' }, n), h('div', { class: 'mute small' }, l)))),
     nxt.length > 0 && h('div', { class: 'panel' }, h('div', { class: 'label' }, `NEXT ${s.dayType} DAY`),
       nxt.map((x) => h('div', { class: 'list-row' }, h('span', {}, `${x.name} · ${scheme(x)}`), h('span', { class: 'gold', style: 'white-space:nowrap' }, `${kg(x.target.load)} kg`)))),
-    h('div', { class: 'panel ox' }, h('div', { class: 'label' }, 'RECOVERY · PHONE STAYS OUTSIDE'),
-      spa.length ? h('div', { class: 'btn line-gold', style: 'min-height:56px' }, `LOGGED · ${spa.reduce((a, r) => a + r.durationMin, 0)} MIN HEAT`)
-        : [title,
-          spaEdit && h('div', { class: 'stack' },
-            h('div', { class: 'stepper sm' }, h('span', { style: 'width:80px' }, 'Sauna'), stepper({ value: m.sauna, step: 1, max: 60, fmt: (x) => `${x} min`, label: 'sauna minutes', onChange: (x) => { m.sauna = x; retitle(); } })),
-            h('div', { class: 'stepper sm' }, h('span', { style: 'width:80px' }, 'Hammam'), stepper({ value: m.hammam, step: 1, max: 60, fmt: (x) => `${x} min`, label: 'hammam minutes', onChange: (x) => { m.hammam = x; retitle(); } }))),
-          h('button', { class: 'btn ox', onclick: logSpa }, ok(), 'LOG BOTH'),
-          !spaEdit && h('button', { class: 'btn', onclick: () => { spaEdit = true; render(); } }, 'Edit minutes')]),
+    h('div', { class: 'panel ox' }, h('div', { class: 'label' }, 'RECOVERY · PHONE STAYS OUTSIDE'), spaCard(s.date, s.id)),
     h('div', { class: 'push grid2' },
       h('button', { class: 'btn', onclick: () => doUndo(s) }, 'Undo last set'),
-      h('button', { class: 'btn on', onclick: () => { spaEdit = false; closeSession(); go('today'); } }, 'Back to Today')));
+      h('button', { class: 'btn on', onclick: () => { closeSession(); go('today'); } }, 'Back to Today')));
 }

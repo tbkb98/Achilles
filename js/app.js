@@ -6,8 +6,10 @@ import { todayView } from './ui/today.js';
 import { sessionView } from './ui/session.js';
 import { historyView, logView } from './ui/history.js';
 import { settingsView } from './ui/settings.js';
+import { eatView } from './ui/eat.js';
+import { spaView } from './ui/recovery.js';
 
-export const VERSION = '1.0.0';
+export const VERSION = '1.1.0';
 
 // One ticker at a time: the visible screen registers what must update four times a second.
 let ticker = null;
@@ -36,6 +38,7 @@ function svg(d) { const t = document.createElement('template'); t.innerHTML = `<
 const TABS = [
   ['today', 'Today', '<path d="M3 11l9-8 9 8v9H3z"/>'],
   ['train', 'History', '<path d="M2 12h20M6 7v10M18 7v10"/>'],
+  ['eat', 'Eat', '<path d="M3 11h18a9 9 0 0 1-18 0zM12 3v5"/>'],
   ['settings', 'Settings', '<circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M19 5l-3 3M8 16l-3 3"/>'],
 ];
 function tabbar(r) {
@@ -70,11 +73,13 @@ export function render() {
   else if (r === 'session') {
     if (!a) { location.replace('#today'); return; }
     view = sessionView(a); tabbed = false;
-  } else if (r === 'train') view = historyView();
+  } else if (r === 'spa') { view = spaView(); tabbed = false; }
+  else if (r === 'train') view = historyView();
+  else if (r === 'eat') view = eatView();
   else if (r === 'log') view = logView(arg);
   else if (r === 'settings') view = settingsView();
   else view = todayView();
-  keepAwake(r === 'session' && !!a && a.status === 'ACTIVE');
+  keepAwake((r === 'session' && !!a && a.status === 'ACTIVE') || (r === 'spa' && !!S.kv.spaTimer));
   root.replaceChildren(view);
   if (tabbed) {
     if (a && r !== 'today') root.append(h('div', { class: 'minibar' }, h('button', { class: 'btn line-gold', style: 'background:var(--night)', onclick: () => go('session') }, a.status === 'ACTIVE' ? 'SESSION RUNNING · RETURN' : 'SESSION SUMMARY · RETURN')));
@@ -87,7 +92,7 @@ function registerSW() {
   if (!('serviceWorker' in navigator)) return;
   navigator.serviceWorker.register('./sw.js').then((reg) => {
     S.swReg = reg;
-    const check = () => { if (reg.waiting && navigator.serviceWorker.controller) S.updateReady = true; };
+    const check = () => { if (reg.waiting && navigator.serviceWorker.controller && !S.updateReady) { S.updateReady = true; if (!activeSession()) render(); } };
     check();
     reg.addEventListener('updatefound', () => { const w = reg.installing; if (w) w.addEventListener('statechange', check); });
   }).catch(() => {});

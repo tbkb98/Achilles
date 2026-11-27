@@ -77,7 +77,7 @@ img.px { image-rendering: pixelated; display: block; }
 .capsule .skip { background: var(--gold); color: #0E0E14; font-family: var(--px); font-size: 12px; min-width: 120px; }
 
 .tabbar { position: fixed; left: 50%; transform: translateX(-50%); width: min(448px, calc(100% - 32px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); height: 64px; display: flex; align-items: center; justify-content: space-around; background: rgba(255,255,255,.08); -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4); border: 1px solid rgba(255,255,255,.2); border-radius: 32px; z-index: 5; }
-.tabbar button { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 72px; min-height: 48px; justify-content: center; font-size: 16px; }
+.tabbar button { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 64px; min-height: 48px; justify-content: center; font-size: 16px; }
 .tabbar button.on { color: var(--gold); }
 .minibar { position: fixed; left: 50%; transform: translateX(-50%); width: min(448px, calc(100% - 32px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 86px); z-index: 5; }
 
@@ -93,3 +93,17 @@ img.px { image-rendering: pixelated; display: block; }
 .h1 .chip { vertical-align: middle; }
 .ok { width: .95em; height: .8em; display: inline-block; vertical-align: -0.05em; margin-right: .45em; flex: none; }
 .ok.after { margin: 0 0 0 .45em; }
+
+/* Installed on the Home Screen: iOS fades content right under the status bar, so start lower. */
+@media (display-mode: standalone) {
+  .screen { padding-top: calc(max(env(safe-area-inset-top, 0px), 44px) + 26px); }
+}
+.meal { display: flex; gap: 6px; }
+.meal-main { flex: 1; display: flex; align-items: center; gap: 10px; min-height: 54px; padding: 4px 10px; background: var(--panel); border: 2px solid var(--line); color: #C9C9D6; text-align: left; }
+.meal.on .meal-main { color: var(--bone); border-color: var(--gold); }
+.meal .box { width: 24px; height: 24px; flex: none; border: 2px solid var(--gold); display: flex; align-items: center; justify-content: center; color: #0E0E14; }
+.meal.on .box { background: var(--gold); }
+.meal-more { width: 50px; flex: none; background: var(--panel); border: 2px solid var(--line); font-size: 22px; }
+.ok.nomargin { margin: 0; }
+.inp { font: inherit; font-size: 21px; color: var(--bone); background: var(--night); border: 2px solid var(--line); border-radius: 0; padding: 0 10px; width: 100%; height: 50px; -webkit-user-select: text; user-select: text; -webkit-appearance: none; appearance: none; }
+.btn.tight { padding: 0 6px; font-size: 19px; }

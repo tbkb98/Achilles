@@ -1,6 +1,6 @@
 // Minimal IndexedDB wrapper. Everything T logs lives here, on the phone only.
-const NAME = 'achilles', VERSION = 1;
-export const STORES = ['sessions', 'bodyweights', 'recovery', 'kv'];
+const NAME = 'achilles', VERSION = 2; // v2 adds 'days' (eating log)
+export const STORES = ['sessions', 'bodyweights', 'recovery', 'kv', 'days'];
 let dbp = null;
 
 function open() {

@@ -1,6 +1,6 @@
 import { h, kg } from '../dom.js';
-import { S } from '../state.js';
-import { RULE } from '../engine/progression.js';
+import { S, today } from '../state.js';
+import { RULE, daysBetween } from '../engine/progression.js';
 
 export const scheme = (e) => (e.stages ? `${e.stages.length} stages` : `${e.sets}×${e.reps}`);
 export function targetText(e) {
@@ -12,9 +12,11 @@ export function targetText(e) {
 export function lastText(e) {
   const l = e.last; if (!l) return null;
   const reps = e.stages ? (l.reps.length >= e.sets ? 'all stages' : `${l.reps.length} of ${e.sets} stages`) : l.reps.join(', ');
-  if (e.rule === RULE.UNW) return `${reps} reps`;
-  if (e.rule === RULE.BW) return `${l.ext ? 'BW + ' + kg(l.ext) + ' kg' : 'BW'} × ${reps}`;
-  return `${kg(l.load)} kg ${e.stages ? '· ' : '× '}${reps}`;
+  // an old entry says when it was, so a 2025 number is not read as last week's
+  const when = l.date && daysBetween(l.date, today()) > 30 ? ` (${new Date(l.date + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', year: 'numeric' })})` : '';
+  if (e.rule === RULE.UNW) return `${reps} reps${when}`;
+  if (e.rule === RULE.BW) return `${l.ext ? 'BW + ' + kg(l.ext) + ' kg' : 'BW'} × ${reps}${when}`;
+  return `${kg(l.load)} kg ${e.stages ? '· ' : '× '}${reps}${when}`;
 }
 export function shortVal(e, v) {
   if (e.rule === RULE.UNW) return `${v.reps} REPS`;

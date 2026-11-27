@@ -1,5 +1,5 @@
 // Offline shell. Cache-first: after the first load the app never needs the network.
-const VERSION = 'achilles-1.0.0';
+const VERSION = 'achilles-1.1.0';
 const FILES = [
   './',
   './assets/fonts/Jersey15.woff2',
@@ -18,6 +18,7 @@ const FILES = [
   './js/app.js',
   './js/dom.js',
   './js/engine/forge.js',
+  './js/engine/nutrition.js',
   './js/engine/plates.js',
   './js/engine/progression.js',
   './js/engine/schedule.js',
@@ -26,7 +27,9 @@ const FILES = [
   './js/state.js',
   './js/store/db.js',
   './js/ui/common.js',
+  './js/ui/eat.js',
   './js/ui/history.js',
+  './js/ui/recovery.js',
   './js/ui/session.js',
   './js/ui/settings.js',
   './js/ui/today.js',

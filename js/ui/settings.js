@@ -1,6 +1,6 @@
 // Settings, backup and restore. Everything here stays on the phone.
 import { h, kg, stepper } from '../dom.js';
-import { S, settings, setSetting, setKV, exportAll, importData, eraseAll, toCSV, activeSession, today } from '../state.js';
+import { S, settings, setSetting, setKV, exportAll, importData, eraseAll, toCSV, toSheetCSV, activeSession, today } from '../state.js';
 import { TEMPLATES } from '../../seed/program.js';
 import { bell, unlockAudio, shareFile } from '../platform/device.js';
 import { render, toast, applyUpdate, VERSION } from '../app.js';
@@ -58,16 +58,17 @@ export function settingsView() {
       h('div', { class: 'stepper sm' }, h('span', { style: 'width:70px' }, 'Hammam'), stepper({ value: st.hammam, step: 1, max: 60, fmt: (x) => `${x} min`, label: 'hammam minutes', onChange: (x) => setSetting('hammam', x) }))),
 
     h('div', { class: 'panel' }, h('div', { class: 'label gold' }, 'Your data'),
-      h('div', { class: 'mute small' }, `${own} sessions logged here, ${S.sessions.length - own} from your sheet, ${S.weights.length} weigh-ins. ` + (S.kv.lastBackupAt ? `Last backup ${S.kv.lastBackupAt.slice(0, 10)}.` : 'No backup yet.')),
+      h('div', { class: 'mute small' }, `${own} sessions logged here, ${S.sessions.length - own} from your sheet, ${S.weights.length} weigh-ins, ${S.days.length} days of eating. ` + (S.kv.lastBackupAt ? `Last backup ${S.kv.lastBackupAt.slice(0, 10)}.` : 'No backup yet.')),
       h('button', { class: 'btn on', onclick: async () => { if (await shareFile(`achilles-backup-${today()}.json`, JSON.stringify(exportAll()), 'application/json')) { await setKV('lastBackupAt', new Date().toISOString()); render(); } } }, 'Back up to a file'),
       h('button', { class: 'btn', onclick: () => shareFile(`achilles-sets-${today()}.csv`, toCSV(), 'text/csv') }, 'Export sets as CSV'),
+      h('button', { class: 'btn', onclick: () => shareFile(`achilles-sheet-${today()}.csv`, toSheetCSV(), 'text/csv') }, 'Export in my sheet layout'),
       h('button', { class: 'btn', onclick: () => pickFile('merge') }, 'Import a setup or history file'),
       twoTap('Restore from a backup', 'Tap again: this replaces everything', () => pickFile('replace')),
       twoTap('Erase everything on this phone', 'Tap again to erase', async () => { await eraseAll(); toast('Erased.'); render(); }),
       h('div', { class: 'mute small' }, 'Nothing leaves this phone unless you export it. ' + (S.persisted === false ? 'iOS has not marked this storage as permanent, so keep a backup.' : ''))),
 
     h('div', { class: 'panel' }, h('div', { class: 'label gold' }, 'About'),
-      h('div', { class: 'mute small' }, `Achilles ${VERSION}. Milestone 1: the session logger. Eating, body-weight trend and progress charts come next.`),
+      h('div', { class: 'mute small' }, `Achilles ${VERSION}. Sessions, eating, weight trend and recovery. Hero stages and progress charts come next.`),
       S.updateReady && h('button', { class: 'btn on', disabled: busy, onclick: applyUpdate }, busy ? 'Update ready · finish your session first' : 'Update ready · install now'),
       !S.updateReady && h('button', { class: 'btn', onclick: async () => { try { if (S.swReg) await S.swReg.update(); } catch (e) {} setTimeout(() => { toast(S.updateReady ? 'Update found.' : 'You have the latest version.'); render(); }, 1200); } }, 'Check for an update')));
 }

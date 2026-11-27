@@ -21,7 +21,14 @@ function note(freq, at, dur, vol = 0.12) {
   o.connect(g).connect(ctx.destination);
   o.start(ctx.currentTime + at); o.stop(ctx.currentTime + at + dur + 0.02);
 }
-export function bell() { try { note(880, 0, 0.16); note(1320, 0.16, 0.16); note(1760, 0.32, 0.4); } catch (e) {} }
+// One strike of a ring bell in square waves: a fundamental, a slightly detuned twin for the
+// metallic shimmer, and two short inharmonic overtones for the clang.
+function strike(at, ring, vol) {
+  note(1047, at, ring, vol); note(1061, at, ring, vol * 0.55);
+  note(2794, at, ring * 0.5, vol * 0.3); note(4435, at, ring * 0.2, vol * 0.18);
+}
+// Boxing bell: ding-ding-ding, the last one left to ring.
+export function bell() { try { strike(0, 0.3, 0.1); strike(0.2, 0.3, 0.1); strike(0.4, 1.3, 0.11); } catch (e) {} }
 export function tick() { try { note(660, 0, 0.08, 0.08); } catch (e) {} }
 
 // --- keep the screen awake during a session (iOS 18.4+ in Home Screen apps) ---
